@@ -282,8 +282,8 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="showTab('listen',this)">Listen</button>
       <button class="tab-btn" onclick="showTab('map',this)">Map</button>
-      <button class="tab-btn" onclick="showTab('studio',this)">Studio Notes</button>
       <button class="tab-btn" onclick="showTab('threed',this)">3D View</button>
+      <button class="tab-btn" onclick="showTab('studio',this)">Studio Notes</button>
     </div>
     <span class="nav-title">Moosic Atlas</span>
   </div>
@@ -383,43 +383,6 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
 </div>
 
 <!-- ══ STUDIO NOTES ══ -->
-<div class="panel" id="tab-studio">
-  <div class="content">
-    <div class="studio-h">Why K-Means, and why k = 5</div>
-    <div class="studio-sub">Three algorithms competed. K-Means with k = 5 delivers the best silhouette score among interpretable solutions, with full coverage and no noise points.</div>
-    <div class="algo-wrap">
-      <table class="algo-table">
-        <thead><tr><th>Method</th><th>Clusters</th><th>Noise</th><th>Coverage</th><th>Silhouette</th><th>Notes</th></tr></thead>
-        <tbody>
-          <tr><td><span class="win">K-Means<span class="badge">chosen</span></span></td><td>5</td><td>0</td><td>100%</td><td class="win">0.267</td><td>k=5, k-means++, n_init=10</td></tr>
-          <tr><td>Agglomerative (Ward)</td><td>5</td><td>0</td><td>100%</td><td>0.220</td><td>Good dendrogram for presentations</td></tr>
-          <tr><td>DBSCAN</td><td>variable</td><td>931</td><td>82%</td><td>−0.022</td><td>eps=1.0, min_samples=5</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="studio-h">Audio fingerprints — all 5 playlists</div>
-    <div class="studio-sub">Each polygon spans 9 standardised audio axes. Shape = cluster identity.</div>
-    <div class="radar-grid" id="studio-radars"></div>
-
-    <div class="studio-h">Playlist sizes</div>
-    <div class="studio-sub">Track counts after K-Means assignment (all 5,235 tracks).</div>
-    <div class="sz-rows" id="sz-rows"></div>
-
-    <div class="how-box">
-      <div class="how-h">How to read the Atlas</div>
-      <ul class="how-list">
-        <li><strong>K-Means</strong> is the operating model — ask for k clusters, every track is assigned, no outliers, scales cleanly.</li>
-        <li><strong>Ward agglomerative</strong> is the conversation tool. The dendrogram goes on the wall when you debate splits with the music team.</li>
-        <li><strong>DBSCAN</strong> is the quality filter. 931 noise points (17.8%) sit in no dense neighbourhood — editorial puzzles, not errors.</li>
-        <li><strong>Silhouette scores:</strong> k=2: 0.333 → k=3: 0.271 → k=4: 0.276 → k=5: 0.267 → k=6: 0.248. Best interpretable balance at k=5.</li>
-        <li><strong>The Atlas drafts; a person listens.</strong> Audio features cannot hear lyrics, language, era or context.</li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- ══ 3D VIEW ══ -->
 <div class="panel" id="tab-threed">
   <div class="content">
     <div class="studio-h" style="margin-bottom:6px;">3D Cluster Visualisations</div>
@@ -460,6 +423,43 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
     <div class="map-note" style="margin-top:16px;">All 3D plots use Plotly.js · Drag to rotate · Scroll to zoom · Click legend to toggle clusters · Hover for song details</div>
   </div>
 </div>
+<div class="panel" id="tab-studio">
+  <div class="content">
+    <div class="studio-h">Why K-Means, and why k = 5</div>
+    <div class="studio-sub">Three algorithms competed. K-Means with k = 5 delivers the best silhouette score among interpretable solutions, with full coverage and no noise points.</div>
+    <div class="algo-wrap">
+      <table class="algo-table">
+        <thead><tr><th>Method</th><th>Clusters</th><th>Noise</th><th>Coverage</th><th>Silhouette</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span class="win">K-Means<span class="badge">chosen</span></span></td><td>5</td><td>0</td><td>100%</td><td class="win">0.267</td><td>k=5, k-means++, n_init=10</td></tr>
+          <tr><td>Agglomerative (Ward)</td><td>5</td><td>0</td><td>100%</td><td>0.220</td><td>Good dendrogram for presentations</td></tr>
+          <tr><td>DBSCAN</td><td>variable</td><td>931</td><td>82%</td><td>−0.022</td><td>eps=1.0, min_samples=5</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="studio-h">Audio fingerprints — all 5 playlists</div>
+    <div class="studio-sub">Each polygon spans 9 standardised audio axes. Shape = cluster identity.</div>
+    <div class="radar-grid" id="studio-radars"></div>
+
+    <div class="studio-h">Playlist sizes</div>
+    <div class="studio-sub">Track counts after K-Means assignment (all 5,235 tracks).</div>
+    <div class="sz-rows" id="sz-rows"></div>
+
+    <div class="how-box">
+      <div class="how-h">How to read the Atlas</div>
+      <ul class="how-list">
+        <li><strong>K-Means</strong> is the operating model — ask for k clusters, every track is assigned, no outliers, scales cleanly.</li>
+        <li><strong>Ward agglomerative</strong> is the conversation tool. The dendrogram goes on the wall when you debate splits with the music team.</li>
+        <li><strong>DBSCAN</strong> is the quality filter. 931 noise points (17.8%) sit in no dense neighbourhood — editorial puzzles, not errors.</li>
+        <li><strong>Silhouette scores:</strong> k=2: 0.333 → k=3: 0.271 → k=4: 0.276 → k=5: 0.267 → k=6: 0.248. Best interpretable balance at k=5.</li>
+        <li><strong>The Atlas drafts; a person listens.</strong> Audio features cannot hear lyrics, language, era or context.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 3D VIEW ══ -->
 
 <script>
 /* ═══ DATA ═══ */
