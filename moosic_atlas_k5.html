@@ -158,6 +158,7 @@ canvas#radar{display:block;}
 .sp-btn svg{width:12px;height:12px;fill:#fff;}
 
 /* Closest */
+.radar-active td{background:#e0d8c8 !important;}
 .closest-hd{font-size:.86rem;font-weight:700;color:var(--ink);margin-bottom:3px;margin-top:22px;}
 .closest-sub{font-size:.76rem;color:var(--muted);margin-bottom:10px;line-height:1.5;}
 .closest-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
@@ -310,6 +311,11 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
         <div class="pl-name" id="pl-name"></div>
         <div class="pl-desc" id="pl-desc"></div>
         <div class="pl-count"><span class="pl-dot" id="pl-dot"></span><span id="pl-cnt"></span> tracks in this playlist</div>
+        <!-- Radar label + reset button -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:14px;">
+          <span id="radar-label" style="font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">Cluster Average</span>
+          <button id="avg-btn" onclick="resetToAverage()" style="display:none;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--accent);cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#ccc6bb'" onmouseout="this.style.background='var(--surface2)'">⌀ Cluster Average</button>
+        </div>
         <!-- Radar -->
         <canvas id="radar" style="width:100%;display:block;"></canvas>
       </div>
@@ -511,7 +517,7 @@ function showTab(id,btn){
 }
 
 /* ═══ RADAR ═══ */
-function drawRadar(canvas,k,W,H){
+function drawRadar(canvas,k,W,H,customVals){
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
   // If explicit size given (studio mini radars), use it; else fill container
@@ -529,7 +535,7 @@ function drawRadar(canvas,k,W,H){
   const cx=cW/2,cy=cH/2;
   const r=(Math.min(cW,cH)/2)-labelPad;
   const n=AXES.length;
-  const col=CL.colors[k],f=CL.features[k],vals=AXES.map(a=>f[a]||0);
+  const col=CL.colors[k],f=CL.features[k],vals=customVals||AXES.map(a=>f[a]||0);
   // subtle rings
   [.25,.5,.75,1].forEach(fr=>{
     ctx.beginPath();
@@ -604,15 +610,43 @@ function selectK(k){
   renderTable(allSongs);
   renderClosest(k);
 }
+function showSongRadar(trackName,vals9){
+  // vals9: [loudness,energy,danceability,acousticness,instrumentalness,tempo_norm,valence,liveness,speechiness]
+  const cv=document.getElementById('radar');
+  drawRadar(cv,curK,null,null,vals9);
+  document.getElementById('radar-label').textContent='♪ '+trackName;
+  document.getElementById('avg-btn').style.display='inline-block';
+  // highlight active row
+  document.querySelectorAll('#song-tbody tr,#closest-list tr').forEach(r=>r.classList.remove('radar-active'));
+}
+function resetToAverage(){
+  drawRadar(document.getElementById('radar'),curK);
+  document.getElementById('radar-label').textContent='Cluster Average';
+  document.getElementById('avg-btn').style.display='none';
+  document.querySelectorAll('#song-tbody tr,#closest-list tr').forEach(r=>r.classList.remove('radar-active'));
+}
 function renderTable(songs){
   const tb=document.getElementById('song-tbody');tb.innerHTML='';
   songs.forEach(([t,a,en,va,da,bpm,url])=>{
     const spUrl=url||('https://open.spotify.com/search/'+encodeURIComponent(t+' '+a));
     const tr=document.createElement('tr');
+    tr.style.cursor='pointer';
+    tr.title='Click to see this track\'s audio fingerprint';
+    // AXES order: loudness,energy,danceability,acousticness,instrumentalness,tempo,valence,liveness,speechiness
+    // track table has: en,va,da,bpm — normalise tempo to 0-1 (range ~60-200)
+    const tempoNorm=Math.min((bpm-60)/140,1);
+    const f=CL.features[curK];
+    // use cluster averages for the 5 missing features, song values for 4 known
+    const vals=[f.loudness,en,da,f.acousticness,f.instrumentalness,tempoNorm,va,f.liveness,f.speechiness];
     tr.innerHTML=`<td class="td-title">${t}</td><td class="td-artist">${a}</td>`+
       `<td class="td-num">${en.toFixed(2)}</td><td class="td-num">${va.toFixed(2)}</td>`+
       `<td class="td-num">${da.toFixed(2)}</td><td class="td-num">${bpm}</td>`+
-      `<td><a class="sp-btn" href="${spUrl}" target="_blank"><svg viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></a></td>`;
+      `<td><a class="sp-btn" href="${spUrl}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></a></td>`;
+    tr.addEventListener('click',()=>{
+      document.querySelectorAll('#song-tbody tr,#closest-list tr').forEach(r=>r.classList.remove('radar-active'));
+      tr.classList.add('radar-active');
+      showSongRadar(t,vals);
+    });
     tb.appendChild(tr);
   });
 }
@@ -625,7 +659,9 @@ function renderClosest(k){
   const tbody=document.getElementById('closest-list');tbody.innerHTML='';
   CL.closest[k].forEach(([t,a,dance,energy,acoustic,tempo,valence,speech,instr,live,loud,url],i)=>{
     const tr=document.createElement('tr');
-    const spBtn=`<a href="${url}" target="_blank" class="sp-btn" title="Open on Spotify" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:#1DB954;border-radius:50%;text-decoration:none;flex-shrink:0;transition:transform .15s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.508 17.31c-.21.323-.657.424-.98.213-2.686-1.64-6.068-2.012-10.054-1.102-.383.087-.767-.152-.854-.535-.087-.383.151-.767.535-.854 4.36-1 8.12-.566 11.14 1.277.323.21.424.657.213.98zm1.47-3.27c-.265.407-.826.535-1.234.27-3.074-1.89-7.762-2.44-11.4-1.336-.47.143-.965-.122-1.108-.591-.142-.47.123-.965.591-1.108 4.155-1.26 9.32-.648 12.88 1.53.407.265.534.826.27 1.234zm.127-3.405C15.74 8.462 9.51 8.255 6.062 9.3c-.564.17-1.16-.15-1.33-.714-.17-.564.15-1.16.714-1.33 3.98-1.208 10.603-.975 14.79 1.548.508.302.675.958.373 1.466-.3.508-.957.675-1.465.373z"/></svg></a>`;
+    tr.style.cursor='pointer';
+    tr.title='Click to see this track\'s audio fingerprint';
+    const spBtn=`<a href="${url}" target="_blank" class="sp-btn" title="Open on Spotify" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:#1DB954;border-radius:50%;text-decoration:none;flex-shrink:0;transition:transform .15s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.508 17.31c-.21.323-.657.424-.98.213-2.686-1.64-6.068-2.012-10.054-1.102-.383.087-.767-.152-.854-.535-.087-.383.151-.767.535-.854 4.36-1 8.12-.566 11.14 1.277.323.21.424.657.213.98zm1.47-3.27c-.265.407-.826.535-1.234.27-3.074-1.89-7.762-2.44-11.4-1.336-.47.143-.965-.122-1.108-.591-.142-.47.123-.965.591-1.108 4.155-1.26 9.32-.648 12.88 1.53.407.265.534.826.27 1.234zm.127-3.405C15.74 8.462 9.51 8.255 6.062 9.3c-.564.17-1.16-.15-1.33-.714-.17-.564.15-1.16.714-1.33 3.98-1.208 10.603-.975 14.79 1.548.508.302.675.958.373 1.466-.3.508-.957.675-1.465.373z"/></svg></a>`;
     tr.innerHTML=`<td class="ctr-num">${i+1}</td>
       <td class="ctr-track">${t}</td>
       <td class="ctr-artist">${a}</td>
@@ -639,6 +675,15 @@ function renderClosest(k){
       <td class="ctr-val">${live.toFixed(3)}</td>
       <td class="ctr-val loud">${loud.toFixed(1)}</td>
       <td class="ctr-sp">${spBtn}</td>`;
+    // AXES: loudness,energy,danceability,acousticness,instrumentalness,tempo,valence,liveness,speechiness
+    const tempoNorm=Math.min((tempo-60)/140,1);
+    const loudNorm=Math.min(Math.max((loud+60)/60,0),1);
+    const vals=[loudNorm,energy,dance,acoustic,instr,tempoNorm,valence,live,speech];
+    tr.addEventListener('click',()=>{
+      document.querySelectorAll('#song-tbody tr,#closest-list tr').forEach(r=>r.classList.remove('radar-active'));
+      tr.classList.add('radar-active');
+      showSongRadar(t,vals);
+    });
     tbody.appendChild(tr);
   });
 }
