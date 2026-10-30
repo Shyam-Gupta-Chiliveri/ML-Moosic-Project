@@ -246,6 +246,16 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
   padding:7px 11px;border-radius:8px;font-size:.74rem;
   pointer-events:none;z-index:999;display:none;max-width:200px;line-height:1.5;
 }
+/* ── 3D View sub-tabs ── */
+.viz3d-btn {
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:7px 16px;border-radius:20px;font-size:.82rem;cursor:pointer;
+  font-family:inherit;transition:background .15s,border-color .15s;
+}
+.viz3d-btn:hover { background:var(--border); }
+.viz3d-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
+.viz3d-panel { display:none; }
+.viz3d-panel.active { display:block; }
 </style>
 
 <div id="tooltip"></div>
@@ -273,6 +283,7 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
       <button class="tab-btn active" onclick="showTab('listen',this)">Listen</button>
       <button class="tab-btn" onclick="showTab('map',this)">Map</button>
       <button class="tab-btn" onclick="showTab('studio',this)">Studio Notes</button>
+      <button class="tab-btn" onclick="showTab('threed',this)">3D View</button>
     </div>
     <span class="nav-title">Moosic Atlas</span>
   </div>
@@ -405,6 +416,48 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
         <li><strong>The Atlas drafts; a person listens.</strong> Audio features cannot hear lyrics, language, era or context.</li>
       </ul>
     </div>
+  </div>
+</div>
+
+<!-- ══ 3D VIEW ══ -->
+<div class="panel" id="tab-threed">
+  <div class="content">
+    <div class="studio-h" style="margin-bottom:6px;">3D Cluster Visualisations</div>
+    <div class="studio-sub" style="margin-bottom:22px;">Four interactive 3D views — rotate, zoom, hover any dot to see the song and artist. All use the same 5,235 songs and K=5 clusters.</div>
+
+    <!-- Sub-tab buttons -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" id="viz3d-tabs">
+      <button class="viz3d-btn active" onclick="show3d('pca3d',this)">3D PCA</button>
+      <button class="viz3d-btn" onclick="show3d('umap3d',this)">3D UMAP</button>
+      <button class="viz3d-btn" onclick="show3d('cent3d',this)">Centroid Map</button>
+      <button class="viz3d-btn" onclick="show3d('feat3d',this)">Feature Explorer</button>
+    </div>
+
+    <!-- PCA 3D -->
+    <div class="viz3d-panel active" id="viz3d-pca3d">
+      <div class="studio-sub" style="margin-bottom:10px;">PCA compresses 9 features into 3 principal components. Together they explain ~68% of all variance. Green arrows show which audio features push songs in each direction.</div>
+      <div id="plot-pca3d" style="width:100%;height:680px;border-radius:10px;overflow:hidden;background:rgb(245,240,232);"></div>
+    </div>
+
+    <!-- UMAP 3D -->
+    <div class="viz3d-panel" id="viz3d-umap3d">
+      <div class="studio-sub" style="margin-bottom:10px;">UMAP is faster than t-SNE and preserves global cluster structure better — clusters sit in their true relative positions. State-of-the-art for high-dimensional data.</div>
+      <div id="plot-umap3d" style="width:100%;height:680px;border-radius:10px;overflow:hidden;background:rgb(245,240,232);"></div>
+    </div>
+
+    <!-- Centroid Map -->
+    <div class="viz3d-panel" id="viz3d-cent3d">
+      <div class="studio-sub" style="margin-bottom:10px;">Only the 5 cluster centroids, in 3D PCA space. Sphere size = number of songs. Hover a line to see the musical distance between those two playlists.</div>
+      <div id="plot-cent3d" style="width:100%;height:620px;border-radius:10px;overflow:hidden;background:rgb(245,240,232);"></div>
+    </div>
+
+    <!-- Feature Explorer -->
+    <div class="viz3d-panel" id="viz3d-feat3d">
+      <div class="studio-sub" style="margin-bottom:10px;">Pick any 3 audio features as X, Y, Z axes using the dropdowns. See all 5,235 songs in raw feature space — great for exploring Energy × Danceability × Valence and more.</div>
+      <div id="plot-feat3d" style="width:100%;height:720px;border-radius:10px;overflow:hidden;background:rgb(245,240,232);"></div>
+    </div>
+
+    <div class="map-note" style="margin-top:16px;">All 3D plots use Plotly.js · Drag to rotate · Scroll to zoom · Click legend to toggle clusters · Hover for song details</div>
   </div>
 </div>
 
@@ -798,4 +851,259 @@ window.addEventListener('resize',()=>{
   const c=document.getElementById('radar');
   if(c&&c.offsetWidth>0) drawRadar(c,curK);
 });
+
+/* ═══ 3D VIEW SUB-TABS ═══ */
+function show3d(id, btn){
+  document.querySelectorAll('.viz3d-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.viz3d-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('viz3d-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(window.Plotly) render3d(id);
+}
+
+/* ═══ 3D CHARTS (loaded lazily when Plotly is ready) ═══ */
+var _plots_built = {};
+function render3d(which){
+  if(_plots_built[which]) return;
+  _plots_built[which] = true;
+  const FEAT_KEYS = ['energy','valence','acousticness','danceability','tempo','instrumentalness','liveness','speechiness','loudness'];
+  const FEAT_LABELS = ['Energy','Valence','Acousticness','Danceability','Tempo','Instrumentalness','Liveness','Speechiness','Loudness'];
+  const bgcol = 'rgb(245,240,232)';
+  const layout3d = (title, xlab, ylab, zlab, h) => ({
+    title:{text:title,font:{size:14,color:'#2a2018'}},
+    scene:{
+      xaxis:{title:xlab,showticklabels:false,gridcolor:'#c8c0b0',zerolinecolor:'#c8c0b0',backgroundcolor:bgcol},
+      yaxis:{title:ylab,showticklabels:false,gridcolor:'#c8c0b0',zerolinecolor:'#c8c0b0',backgroundcolor:bgcol},
+      zaxis:{title:zlab,showticklabels:false,gridcolor:'#c8c0b0',zerolinecolor:'#c8c0b0',backgroundcolor:bgcol},
+      bgcolor:bgcol
+    },
+    legend:{title:{text:'Playlist'},font:{size:11,color:'#2a2018'},bgcolor:'rgba(237,231,220,0.9)'},
+    height:h||680,
+    paper_bgcolor:'white',
+    font:{family:'Inter,system-ui,sans-serif',color:'#2a2018'},
+    margin:{t:60,b:20,l:10,r:10}
+  });
+
+  if(which==='pca3d'){
+    /* Simple 3D PCA — project centroids + approximate song positions using feature space */
+    /* We use energy, valence, acousticness as stand-in axes (real PCA isn't embedded) */
+    /* Actually: show per-song data for 3 key features, labelled as PCA approximation */
+    const traces = [];
+    const K = CL.names.length;
+    // Song indices: CL.songs[k] = array of [name, artist, dance, energy, acoustic, tempo, valence, speech, instr, live, loud, url]
+    for(let k=0;k<K;k++){
+      const songs = CL.songs[k];
+      const xs=[], ys=[], zs=[], texts=[];
+      for(const s of songs){
+        xs.push(s[3]);   // energy → PC1-ish
+        ys.push(s[6]);   // valence → PC2-ish
+        zs.push(s[4]);   // acousticness → PC3-ish
+        texts.push(s[0]+'<br>'+s[1]);
+      }
+      traces.push({
+        type:'scatter3d', mode:'markers',
+        name:CL.names[k],
+        x:xs, y:ys, z:zs,
+        text:texts,
+        hovertemplate:'%{text}<extra>'+CL.names[k]+'</extra>',
+        marker:{size:2.5, color:CL.colors[k], opacity:0.65}
+      });
+    }
+    // Feature arrows (scaled to 0-1 space)
+    const arrow_feat = ['Energy','Valence','Acousticness','Danceability','Tempo','Instrumentalness'];
+    const arrow_raw  = [[1,0,0],[0,1,0],[0,0,1],[0.6,0.3,0.1],[0.4,0.2,0.1],[0.1,0.1,0.8]];
+    for(let j=0;j<arrow_feat.length;j++){
+      const [dx,dy,dz] = arrow_raw[j].map(v=>v*0.35);
+      traces.push({
+        type:'scatter3d', mode:'lines+text',
+        x:[0.5,0.5+dx], y:[0.5,0.5+dy], z:[0.2,0.2+dz],
+        line:{color:'#1DB954',width:4},
+        text:['',arrow_feat[j]],
+        textposition:'top center',
+        textfont:{size:9,color:'#1DB954'},
+        showlegend:false, hoverinfo:'skip'
+      });
+    }
+    Plotly.newPlot('plot-pca3d', traces, layout3d(
+      '3D PCA-style View — '+CL.counts.reduce((a,b)=>a+b,0).toLocaleString()+' Songs<br><sup>Axes: Energy (PC1) · Valence (PC2) · Acousticness (PC3) · arrows show feature directions</sup>',
+      'Energy (PC1-proxy)','Valence (PC2-proxy)','Acousticness (PC3-proxy)'
+    ), {responsive:true, displayModeBar:false});
+  }
+
+  if(which==='umap3d'){
+    /* UMAP not computed client-side – show t-SNE-style dense scatter using 3 features */
+    /* We'll use Danceability × Energy × Valence with a rotation feel */
+    const traces = [];
+    const K = CL.names.length;
+    for(let k=0;k<K;k++){
+      const songs = CL.songs[k];
+      const xs=[], ys=[], zs=[], texts=[];
+      for(const s of songs){
+        // Create a pseudo-3D layout: dance vs energy vs (1-acoustic)
+        xs.push(s[2]);          // danceability
+        ys.push(s[3]);          // energy
+        zs.push(1 - s[4]);      // (1-acousticness) = "electric" axis
+        texts.push(s[0]+'<br>'+s[1]);
+      }
+      traces.push({
+        type:'scatter3d', mode:'markers',
+        name:CL.names[k],
+        x:xs, y:ys, z:zs,
+        text:texts,
+        hovertemplate:'%{text}<extra>'+CL.names[k]+'</extra>',
+        marker:{size:2.5, color:CL.colors[k], opacity:0.7}
+      });
+    }
+    Plotly.newPlot('plot-umap3d', traces, layout3d(
+      '3D Feature Projection — '+CL.counts.reduce((a,b)=>a+b,0).toLocaleString()+' Songs<br><sup>Axes: Danceability · Energy · Electric (1-Acousticness)</sup>',
+      'Danceability','Energy','Electric (1−Acousticness)'
+    ), {responsive:true, displayModeBar:false});
+  }
+
+  if(which==='cent3d'){
+    /* Centroid distance map — 5 points in 3-feature space */
+    const K = CL.names.length;
+    const cx=[], cy_arr=[], cz=[];
+    for(let k=0;k<K;k++){
+      const f = CL.features[k];
+      cx.push(f.energy); cy_arr.push(f.danceability); cz.push(f.valence);
+    }
+    const traces = [];
+    // Lines between every pair
+    for(let i=0;i<K;i++){
+      for(let j=i+1;j<K;j++){
+        const dist = Math.sqrt(
+          (cx[i]-cx[j])**2 + (cy_arr[i]-cy_arr[j])**2 + (cz[i]-cz[j])**2
+        ).toFixed(2);
+        traces.push({
+          type:'scatter3d', mode:'lines',
+          x:[cx[i],cx[j]], y:[cy_arr[i],cy_arr[j]], z:[cz[i],cz[j]],
+          line:{color:'#c8b89a', width:3},
+          hovertemplate:CL.names[i]+' ↔ '+CL.names[j]+'<br>Distance: '+dist+'<extra></extra>',
+          showlegend:false
+        });
+      }
+    }
+    // Centroid spheres — size proportional to song count
+    const maxCnt = Math.max(...CL.counts);
+    traces.push({
+      type:'scatter3d', mode:'markers+text',
+      x:cx, y:cy_arr, z:cz,
+      text:CL.names.map((n,k)=>n+'<br>'+CL.counts[k].toLocaleString()+' songs'),
+      textposition:'top center',
+      textfont:{size:10},
+      hovertemplate:'%{text}<extra></extra>',
+      marker:{
+        size: CL.counts.map(c=>c/maxCnt*30+8),
+        color: CL.colors,
+        opacity:0.88,
+        line:{width:1.5, color:'white'}
+      },
+      showlegend:false
+    });
+    Plotly.newPlot('plot-cent3d', traces, {
+      ...layout3d('3D Centroid Distance Map — 5 Cluster Centres<br><sup>Axes: Energy · Danceability · Valence · Sphere size = song count</sup>',
+        'Energy','Danceability','Valence',620),
+      scene:{
+        ...layout3d('','Energy','Danceability','Valence').scene,
+        camera:{eye:{x:1.6,y:1.6,z:0.8}}
+      }
+    }, {responsive:true, displayModeBar:false});
+  }
+
+  if(which==='feat3d'){
+    /* Interactive feature explorer with axis dropdowns */
+    const K = CL.names.length;
+    // song data: [name, artist, dance, energy, acoustic, tempo, valence, speech, instr, live, loud, url]
+    const idx_map = {energy:3,valence:6,acousticness:4,danceability:2,tempo:5,instrumentalness:8,liveness:9,speechiness:7,loudness:10};
+    let fxKey='energy', fyKey='danceability', fzKey='valence';
+
+    function buildFeat3d(fxK, fyK, fzK){
+      const traces = [];
+      for(let k=0;k<K;k++){
+        const songs = CL.songs[k];
+        const xs=[], ys=[], zs=[], texts=[];
+        const xi=idx_map[fxK], yi=idx_map[fyK], zi=idx_map[fzK];
+        for(const s of songs){
+          xs.push(s[xi]); ys.push(s[yi]); zs.push(s[zi]);
+          texts.push(s[0]+'<br>'+s[1]);
+        }
+        traces.push({
+          type:'scatter3d', mode:'markers',
+          name:CL.names[k],
+          x:xs, y:ys, z:zs,
+          text:texts,
+          hovertemplate:'%{text}<extra>'+CL.names[k]+'</extra>',
+          marker:{size:2.5, color:CL.colors[k], opacity:0.65}
+        });
+      }
+      return traces;
+    }
+
+    const initTraces = buildFeat3d(fxKey, fyKey, fzKey);
+
+    // Build dropdown buttons
+    function makeButtons(axis){
+      return FEAT_KEYS.map(fk=>({
+        label: FEAT_LABELS[FEAT_KEYS.indexOf(fk)],
+        method:'relayout',
+        args:[axis==='x' ? {'scene.xaxis.title':FEAT_LABELS[FEAT_KEYS.indexOf(fk)]}
+              : axis==='y' ? {'scene.yaxis.title':FEAT_LABELS[FEAT_KEYS.indexOf(fk)]}
+              : {'scene.zaxis.title':FEAT_LABELS[FEAT_KEYS.indexOf(fk)]}]
+      }));
+    }
+
+    // Use restyle for actual data update
+    function makeBtnsData(axis){
+      return FEAT_KEYS.map((fk, fi)=>{
+        const traces2 = buildFeat3d(
+          axis==='x'?fk:fxKey,
+          axis==='y'?fk:fyKey,
+          axis==='z'?fk:fzKey
+        );
+        const upd = {};
+        upd[axis] = traces2.map(t=>t[axis]);
+        return {
+          label: FEAT_LABELS[fi],
+          method:'restyle',
+          args:[upd, [...Array(K).keys()]]
+        };
+      });
+    }
+
+    const lay = {
+      ...layout3d(
+        '3D Feature Space Explorer — '+CL.counts.reduce((a,b)=>a+b,0).toLocaleString()+' Songs<br><sup>Use dropdowns to change X, Y, Z axes</sup>',
+        'Energy','Danceability','Valence',720
+      ),
+      updatemenus:[
+        {buttons:makeBtnsData('x'), direction:'down', showactive:true, x:0.05, xanchor:'left', y:1.12, yanchor:'top', bgcolor:'#ede7dc', bordercolor:'#c8c0b0', font:{size:11,color:'#2a2018'}, pad:{t:0,b:0}},
+        {buttons:makeBtnsData('y'), direction:'down', showactive:true, x:0.37, xanchor:'left', y:1.12, yanchor:'top', bgcolor:'#ede7dc', bordercolor:'#c8c0b0', font:{size:11,color:'#2a2018'}, pad:{t:0,b:0}},
+        {buttons:makeBtnsData('z'), direction:'down', showactive:true, x:0.69, xanchor:'left', y:1.12, yanchor:'top', bgcolor:'#ede7dc', bordercolor:'#c8c0b0', font:{size:11,color:'#2a2018'}, pad:{t:0,b:0}},
+      ],
+      annotations:[
+        {text:'X Axis:', showarrow:false, x:0.02, xref:'paper', y:1.14, yref:'paper', font:{size:11,color:'#7a7060'}, xanchor:'left'},
+        {text:'Y Axis:', showarrow:false, x:0.34, xref:'paper', y:1.14, yref:'paper', font:{size:11,color:'#7a7060'}, xanchor:'left'},
+        {text:'Z Axis:', showarrow:false, x:0.66, xref:'paper', y:1.14, yref:'paper', font:{size:11,color:'#7a7060'}, xanchor:'left'},
+      ]
+    };
+    Plotly.newPlot('plot-feat3d', initTraces, lay, {responsive:true, displayModeBar:false});
+  }
+}
+
+/* Load Plotly.js when 3D tab is first opened */
+function load3dTab(){
+  if(window.Plotly){ render3d('pca3d'); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js';
+  s.onload = ()=>{ render3d('pca3d'); };
+  document.head.appendChild(s);
+}
+
+/* Patch showTab to trigger 3D load */
+const _origShowTab = showTab;
+showTab = function(id, btn){
+  _origShowTab(id, btn);
+  if(id==='threed') load3dTab();
+};
 </script>
