@@ -886,7 +886,7 @@ function render3d(which){
       for(const s of S){ xs.push(s[xi]); ys.push(s[yi]); zs.push(s[zi]); texts.push(s[0]+'<br>'+s[1]); }
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:2,color:CL.colors[k],opacity:0.5}};
+        marker:{size:4,color:CL.colors[k],opacity:0.75}};
     });
   }
 
@@ -949,7 +949,7 @@ function render3d(which){
         for(const s of S){xs.push(s[xi]);ys.push(s[yi]);zs.push(s[zi]);texts.push(s[0]+'<br>'+s[1]);}
         return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
           hovertemplate:'%{text}<extra>'+name+'</extra>',
-          marker:{size:2,color:CL.colors[k],opacity:0.55}};
+          marker:{size:4,color:CL.colors[k],opacity:0.75}};
       });
     }
 
