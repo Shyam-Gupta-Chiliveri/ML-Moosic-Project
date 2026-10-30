@@ -308,14 +308,14 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
           <div class="feat-stats" id="feat-stats"></div>
         </div>
         <!-- Playlist identity -->
-        <div class="pl-name" id="pl-name"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="pl-name" id="pl-name" style="margin:0;"></div>
+          <button id="avg-btn" onclick="resetToAverage()" style="font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--accent);cursor:pointer;transition:background .15s;flex-shrink:0;" onmouseover="this.style.background='#ccc6bb'" onmouseout="this.style.background='var(--surface2)'">⌀ Cluster Average</button>
+        </div>
         <div class="pl-desc" id="pl-desc"></div>
         <div class="pl-count"><span class="pl-dot" id="pl-dot"></span><span id="pl-cnt"></span> tracks in this playlist</div>
-        <!-- Radar label + reset button -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:14px;">
-          <span id="radar-label" style="font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">Cluster Average</span>
-          <button id="avg-btn" onclick="resetToAverage()" style="display:none;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--accent);cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#ccc6bb'" onmouseout="this.style.background='var(--surface2)'">⌀ Cluster Average</button>
-        </div>
+        <!-- Radar song label (shown when a song is selected) -->
+        <div id="radar-label" style="display:none;font-size:.75rem;font-weight:500;color:var(--muted);margin-top:10px;margin-bottom:4px;"></div>
         <!-- Radar -->
         <canvas id="radar" style="width:100%;display:block;"></canvas>
       </div>
@@ -611,18 +611,16 @@ function selectK(k){
   renderClosest(k);
 }
 function showSongRadar(trackName,vals9){
-  // vals9: [loudness,energy,danceability,acousticness,instrumentalness,tempo_norm,valence,liveness,speechiness]
   const cv=document.getElementById('radar');
   drawRadar(cv,curK,null,null,vals9);
-  document.getElementById('radar-label').textContent='♪ '+trackName;
-  document.getElementById('avg-btn').style.display='inline-block';
-  // highlight active row
-  document.querySelectorAll('#song-tbody tr,#closest-list tr').forEach(r=>r.classList.remove('radar-active'));
+  const lbl=document.getElementById('radar-label');
+  lbl.textContent='♪ '+trackName;
+  lbl.style.display='block';
 }
 function resetToAverage(){
   drawRadar(document.getElementById('radar'),curK);
-  document.getElementById('radar-label').textContent='Cluster Average';
-  document.getElementById('avg-btn').style.display='none';
+  const lbl=document.getElementById('radar-label');
+  lbl.style.display='none';
   document.querySelectorAll('#song-tbody tr,#closest-list tr').forEach(r=>r.classList.remove('radar-active'));
 }
 function renderTable(songs){
