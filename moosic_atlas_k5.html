@@ -883,21 +883,31 @@ function render3d(which){
       zaxis:{title:zlab,showticklabels:false,gridcolor:'#c8c0b0',zerolinecolor:'#c8c0b0',backgroundcolor:bgcol},
       bgcolor:bgcol
     },
-    legend:{title:{text:'Playlist'},font:{size:11,color:'#2a2018'},bgcolor:'rgba(237,231,220,0.9)'},
+    legend:{title:{text:'Playlist'},font:{size:12,color:'#2a2018'},bgcolor:'rgba(237,231,220,0.9)',itemsizing:'constant'},
     height:h||680, paper_bgcolor:'white',
     font:{family:'Inter,system-ui,sans-serif',color:'#2a2018'},
     margin:{t:70,b:20,l:10,r:10}
   },extra||{});
 
+  /* helper: 5 invisible legend-only traces so legend dots are big */
+  function legendTraces(){
+    return CL.names.map((name,k)=>({
+      type:'scatter3d',mode:'markers',name,
+      x:[null],y:[null],z:[null],
+      marker:{size:14,color:CL.colors[k],opacity:1},
+      showlegend:true,hoverinfo:'skip'
+    }));
+  }
+
   /* ── 3D PCA: real PC1/PC2/PC3 coords + feature loading arrows ── */
   if(which==='pca3d'){
-    const traces=CL.names.map((name,k)=>{
+    const traces=legendTraces().concat(CL.names.map((name,k)=>{
       const pts=PCA3[k], xs=[],ys=[],zs=[],texts=[];
       for(const p of pts){ xs.push(p[0]);ys.push(p[1]);zs.push(p[2]);texts.push(p[3]+'<br>'+p[4]); }
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:3,color:CL.colors[k],opacity:0.65}};
-    });
+        marker:{size:3,color:CL.colors[k],opacity:0.65},showlegend:false};
+    }));
     /* Feature loading arrows — same as notebook: L3 = components_.T * 3 */
     for(const [lbl,[x0,y0,z0],[x1,y1,z1]] of PCA_L3){
       traces.push({type:'scatter3d',mode:'lines+text',x:[x0,x1],y:[y0,y1],z:[z0,z1],
@@ -914,13 +924,13 @@ function render3d(which){
 
   /* ── 3D UMAP: real UMAP coordinates (n_neighbors=15, min_dist=0.1) ── */
   if(which==='umap3d'){
-    const traces=CL.names.map((name,k)=>{
+    const traces=legendTraces().concat(CL.names.map((name,k)=>{
       const pts=UMAP3[k],xs=[],ys=[],zs=[],texts=[];
       for(const p of pts){xs.push(p[0]);ys.push(p[1]);zs.push(p[2]);texts.push(p[3]+'<br>'+p[4]);}
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:3,color:CL.colors[k],opacity:0.75}};
-    });
+        marker:{size:3,color:CL.colors[k],opacity:0.75},showlegend:false};
+    }));
     Plotly.newPlot('plot-umap3d',traces,layout3d(
       '3D UMAP — '+totalSongs.toLocaleString()+' Songs · 5 Clusters<br><sup>Rotate · Zoom · Hover to see song & artist · Preserves global cluster structure better than t-SNE</sup>',
       'UMAP 1','UMAP 2','UMAP 3',750),{responsive:true,displayModeBar:false});
@@ -928,13 +938,13 @@ function render3d(which){
 
   /* ── 3D t-SNE: sklearn TSNE(n_components=3, perplexity=40, max_iter=1000) ── */
   if(which==='tsne3d'){
-    const traces=CL.names.map((name,k)=>{
+    const traces=legendTraces().concat(CL.names.map((name,k)=>{
       const pts=TSNE3[k],xs=[],ys=[],zs=[],texts=[];
       for(const p of pts){xs.push(p[0]);ys.push(p[1]);zs.push(p[2]);texts.push(p[3]+'<br>'+p[4]);}
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:3,color:CL.colors[k],opacity:0.7}};
-    });
+        marker:{size:3,color:CL.colors[k],opacity:0.7},showlegend:false};
+    }));
     Plotly.newPlot('plot-tsne3d',traces,layout3d(
       '3D t-SNE — '+totalSongs.toLocaleString()+' Songs · 5 Clusters<br><sup>Rotate · Zoom · Hover to see song & artist · Preserves local neighbourhood structure</sup>',
       't-SNE 1','t-SNE 2','t-SNE 3',750),{responsive:true,displayModeBar:false});
@@ -971,13 +981,13 @@ function render3d(which){
     let curXi=3,curYi=2,curZi=6; // Energy, Danceability, Valence (notebook default)
 
     function buildFeat3d(xi,yi,zi){
-      return CL.names.map((name,k)=>{
+      return legendTraces().concat(CL.names.map((name,k)=>{
         const S=CL.songs[k],xs=[],ys=[],zs=[],texts=[];
         for(const s of S){xs.push(s[xi]);ys.push(s[yi]);zs.push(s[zi]);texts.push(s[0]+'<br>'+s[1]);}
         return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
           hovertemplate:'%{text}<extra>'+name+'</extra>',
-          marker:{size:3,color:CL.colors[k],opacity:0.65}};
-      });
+          marker:{size:3,color:CL.colors[k],opacity:0.65},showlegend:false};
+      }));
     }
 
     function makeBtns(axis){
