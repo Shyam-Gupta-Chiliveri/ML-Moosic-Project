@@ -978,7 +978,7 @@ function render3d(which){
   if(which==='feat3d'){
     const FEAT_LABELS=["Energy","Valence","Acousticness","Danceability","Tempo","Instrumentalness","Liveness","Speechiness","Loudness"];
     const FEAT_IDX=[2,3,4,5,6,7,8,9,10];
-    let curXi=3,curYi=2,curZi=6; // Energy, Danceability, Valence (notebook default)
+    let curXi=3,curYi=5,curZi=6; // Energy(idx3), Danceability(idx5), Valence(idx6) — notebook default
 
     function buildFeat3d(xi,yi,zi){
       return legendTraces().concat(CL.names.map((name,k)=>{
@@ -1009,14 +1009,14 @@ function render3d(which){
       '3D Feature Space Explorer — '+totalSongs.toLocaleString()+' Songs<br><sup>Currently: X='+xl+' · Y='+yl+' · Z='+zl+' · Use dropdowns to change axes</sup>',
       xl,yl,zl,780),{
       updatemenus:[
-        {buttons:makeBtns('x'),direction:'down',showactive:true,x:0.05,xanchor:'left',y:1.13,yanchor:'top',bgcolor:'#f5f0e8',bordercolor:'#ccbbaa',font:{size:11,color:'#2a2018'}},
-        {buttons:makeBtns('y'),direction:'down',showactive:true,x:0.37,xanchor:'left',y:1.13,yanchor:'top',bgcolor:'#f5f0e8',bordercolor:'#ccbbaa',font:{size:11,color:'#2a2018'}},
-        {buttons:makeBtns('z'),direction:'down',showactive:true,x:0.69,xanchor:'left',y:1.13,yanchor:'top',bgcolor:'#f5f0e8',bordercolor:'#ccbbaa',font:{size:11,color:'#2a2018'}},
+        {buttons:makeBtns('x'),direction:'down',showactive:true,active:FEAT_IDX.indexOf(curXi),x:0.05,xanchor:'left',y:1.22,yanchor:'top',bgcolor:'#f5f0e8',bordercolor:'#ccbbaa',font:{size:11,color:'#2a2018'},pad:{t:0,b:0}},
+        {buttons:makeBtns('y'),direction:'down',showactive:true,active:FEAT_IDX.indexOf(curYi),x:0.37,xanchor:'left',y:1.22,yanchor:'top',bgcolor:'#f5f0e8',bordercolor:'#ccbbaa',font:{size:11,color:'#2a2018'},pad:{t:0,b:0}},
+        {buttons:makeBtns('z'),direction:'down',showactive:true,active:FEAT_IDX.indexOf(curZi),x:0.69,xanchor:'left',y:1.22,yanchor:'top',bgcolor:'#f5f0e8',bordercolor:'#ccbbaa',font:{size:11,color:'#2a2018'},pad:{t:0,b:0}},
       ],
       annotations:[
-        {text:'X Axis:',showarrow:false,x:0.02,xref:'paper',y:1.155,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
-        {text:'Y Axis:',showarrow:false,x:0.34,xref:'paper',y:1.155,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
-        {text:'Z Axis:',showarrow:false,x:0.66,xref:'paper',y:1.155,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
+        {text:'X Axis:',showarrow:false,x:0.05,xref:'paper',y:1.275,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
+        {text:'Y Axis:',showarrow:false,x:0.37,xref:'paper',y:1.275,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
+        {text:'Z Axis:',showarrow:false,x:0.69,xref:'paper',y:1.275,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
       ]
     });
     Plotly.newPlot('plot-feat3d',buildFeat3d(curXi,curYi,curZi),lay,{responsive:true,displayModeBar:false});
