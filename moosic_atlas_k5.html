@@ -432,30 +432,6 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
 <div class="panel" id="tab-studio">
   <div class="content">
 
-    <!-- SECTION 1: PROJECT OVERVIEW -->
-    <div class="studio-h">What this project does</div>
-    <div class="studio-sub">Moosic Atlas applies unsupervised machine learning to 5,235 Spotify songs. Using 9 audio features per song — no genre labels, no artist names, no popularity scores — K-Means clustering groups songs into 5 musically coherent personalities. The result is a music map built entirely from mathematics.</div>
-
-    <!-- SECTION 2: THE DATA -->
-    <div class="studio-h">The data — 9 audio features per song</div>
-    <div class="studio-sub">Every feature is a number computed by Spotify's audio analysis engine from the raw waveform. All 9 were standardised (zero mean, unit variance) before feeding the model — so no single feature dominates just because of its numerical scale.</div>
-    <div class="algo-wrap">
-      <table class="algo-table">
-        <thead><tr><th>Feature</th><th>Range</th><th>What it measures</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Energy</strong></td><td>0 – 1</td><td>Perceptual intensity — metal scores high, lullabies score low</td></tr>
-          <tr><td><strong>Danceability</strong></td><td>0 – 1</td><td>Rhythm stability and beat regularity — how suitable for dancing</td></tr>
-          <tr><td><strong>Valence</strong></td><td>0 – 1</td><td>Musical positivity — happy/euphoric high, sad/angry low</td></tr>
-          <tr><td><strong>Acousticness</strong></td><td>0 – 1</td><td>Confidence the track uses acoustic (not electronic) instruments</td></tr>
-          <tr><td><strong>Tempo</strong></td><td>BPM → 0–1</td><td>Beats per minute, normalised to the same scale as all other features</td></tr>
-          <tr><td><strong>Loudness</strong></td><td>dB → 0–1</td><td>Average loudness across the track, normalised</td></tr>
-          <tr><td><strong>Instrumentalness</strong></td><td>0 – 1</td><td>Predicts absence of vocals — orchestral near 1, songs with lyrics near 0</td></tr>
-          <tr><td><strong>Liveness</strong></td><td>0 – 1</td><td>Detects live audience — studio recording low, live concert high</td></tr>
-          <tr><td><strong>Speechiness</strong></td><td>0 – 1</td><td>Amount of spoken word — rap/podcast high, pure melody near 0</td></tr>
-        </tbody>
-      </table>
-    </div>
-
     <!-- SECTION 3: ALGORITHM COMPARISON -->
     <div class="studio-h" style="margin-top:28px;">Algorithm selection — three algorithms tested</div>
     <div class="studio-sub">Three clustering algorithms competed on the same data. K-Means won — highest silhouette score, 100% song coverage, and zero noise points.</div>
