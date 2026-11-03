@@ -444,6 +444,10 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
       </table>
     </div>
 
+    <div class="studio-h" style="margin-top:28px;">Algorithm comparison — silhouette score</div>
+    <div class="studio-sub">Higher silhouette = tighter, better-separated clusters. K-Means wins on both coverage and score.</div>
+    <div id="algo-chart" style="width:100%;height:260px;"></div>
+
     <div class="studio-h">Audio fingerprints — all 5 playlists</div>
     <div class="studio-sub">Each polygon spans 9 standardised audio axes. Shape = cluster identity.</div>
     <div class="radar-grid" id="studio-radars"></div>
@@ -812,7 +816,44 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 /* ═══ STUDIO ═══ */
+function buildAlgoChart(){
+  const el=document.getElementById('algo-chart');
+  if(!el||el._built)return;
+  el._built=true;
+  const algos=['K-Means\n(chosen)','Agglomerative\n(Ward)','DBSCAN\n(eps=1.0)'];
+  const scores=[0.267,0.220,-0.022];
+  const colors=['#3D9E8C','#7B6BB0','#aaa'];
+  const traces=[{
+    type:'bar',orientation:'h',
+    x:scores,
+    y:algos,
+    marker:{color:colors},
+    text:scores.map(s=>s.toFixed(3)),
+    textposition:'outside',
+    hovertemplate:'<b>%{y}</b><br>Silhouette: %{x:.3f}<extra></extra>',
+    cliponaxis:false
+  }];
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark'||
+    (!document.documentElement.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const txtColor=isDark?'#d4c9b8':'#3a3020';
+  const gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+  const bgColor='rgba(0,0,0,0)';
+  const layout={
+    margin:{l:140,r:60,t:10,b:40},
+    paper_bgcolor:bgColor,plot_bgcolor:bgColor,
+    xaxis:{title:{text:'Silhouette Score',font:{size:11,color:txtColor}},range:[-0.12,0.38],
+      tickfont:{size:11,color:txtColor},gridcolor:gridColor,zeroline:true,
+      zerolinecolor:isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.2)',zerolinewidth:1.5},
+    yaxis:{tickfont:{size:12,color:txtColor},automargin:true},
+    shapes:[{type:'line',x0:0,x1:0,y0:-0.5,y1:2.5,line:{color:isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)',width:1,dash:'dot'}}],
+    annotations:[{x:0.267,y:0,xref:'x',yref:'y',text:'✓ Best',showarrow:false,
+      font:{size:11,color:'#3D9E8C'},xanchor:'left',xshift:6,yshift:0}]
+  };
+  Plotly.newPlot('algo-chart',traces,layout,{responsive:true,displayModeBar:false});
+}
+
 function buildStudio(){
+  buildAlgoChart();
   const rg=document.getElementById('studio-radars');
   if(!rg.children.length){
     CL.names.forEach((n,k)=>{
