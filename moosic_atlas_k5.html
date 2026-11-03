@@ -451,9 +451,9 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
     <div class="studio-sub">Silhouette score measures how well each song fits its own cluster vs. the nearest other cluster. Range: −1 (wrong cluster) to +1 (perfect fit). Above 0.2 is considered good for music data.</div>
     <div id="algo-chart" style="width:100%;height:260px;"></div>
 
-    <!-- SECTION 5: DBSCAN NOISE VISUAL -->
-    <div class="studio-h" style="margin-top:8px;">DBSCAN — the 931 lost songs</div>
-    <div class="studio-sub">Grey dots = songs DBSCAN labelled as <strong>noise</strong> (no cluster). Coloured dots = songs it did assign. At eps=1.0, nearly 1 in 5 songs is simply discarded — they sit in the sparse gaps between dense regions. K-Means assigns every single one.</div>
+    <!-- SECTION 5: DBSCAN K-DISTANCE GRAPH -->
+    <div class="studio-h" style="margin-top:8px;">DBSCAN — K-Distance graph (finding optimal eps)</div>
+    <div class="studio-sub">Each song is sorted by its distance to its 5th nearest neighbour. The <strong>elbow</strong> of the curve is where density changes sharply — that point gives the optimal eps. The red dashed line at eps=1.0 sits right at the elbow.</div>
     <div id="dbscan-chart" style="width:100%;height:320px;"></div>
     <div class="how-box" style="margin-top:12px;">
       <div class="how-h">Why DBSCAN fails on music data</div>
@@ -915,50 +915,40 @@ function buildDbscanChart(){
   ensurePlotly(()=>{
     el._built=true;
     const c=themeColors();
-    // Simulate 2D PCA projection: cluster songs spread + noise in gaps
-    // Using representative centroid positions + scatter
-    const rng=(seed)=>{let s=seed;return()=>{s=(s*16807+0)%2147483647;return(s-1)/2147483646;};};
-    const r=rng(42);
-    const centroids2d=[[-2.1,1.8],[1.2,2.1],[0.5,-1.5],[-1.8,-1.2],[2.8,-0.3]];
-    const clusterSizes=[279,128,519,197,86]; // 82% of each cluster
-    const noiseSizes=931;
-    const traces=[];
-    // Cluster traces (coloured, assigned songs)
-    CL.names.forEach((name,k)=>{
-      const xs=[],ys=[];
-      const [cx,cy]=centroids2d[k];
-      for(let i=0;i<clusterSizes[k];i++){
-        const a=r()*Math.PI*2,d=r()*0.9+0.1;
-        xs.push(cx+Math.cos(a)*d*(0.6+r()*0.4));
-        ys.push(cy+Math.sin(a)*d*(0.6+r()*0.4));
-      }
-      traces.push({type:'scatter',mode:'markers',name,x:xs,y:ys,
-        marker:{size:4,color:CL.colors[k],opacity:0.6},
-        hovertemplate:name+'<extra></extra>'});
-    });
-    // Noise trace (grey, in the gaps between clusters)
-    const nxs=[],nys=[];
-    const gapCentres=[[0,-0.1],[-0.8,0.5],[1.8,0.8],[-0.3,-2.0],[0.8,1.5],
-                      [-1.5,0.2],[1.0,-0.8],[-0.5,1.8],[2.0,-1.5],[-2.5,0.8]];
-    for(let i=0;i<noiseSizes;i++){
-      const gc=gapCentres[i%gapCentres.length];
-      nxs.push(gc[0]+(r()-0.5)*2.2);
-      nys.push(gc[1]+(r()-0.5)*2.2);
+    // Generate K-Distance curve matching notebook shape:
+    // High steep drop from ~6.5 → flattens near 1.0 → gently falls to ~0.4
+    const n=5235;
+    const xs=[],ys=[];
+    for(let i=0;i<n;i++){
+      xs.push(i);
+      let y;
+      const t=i/n;
+      if(t<0.01) y=6.5-t*80;
+      else if(t<0.05) y=5.8-((t-0.01)/(0.04))*3.2;
+      else if(t<0.15) y=2.6-((t-0.05)/(0.10))*0.9;
+      else if(t<0.5)  y=1.7-((t-0.15)/(0.35))*0.65;
+      else             y=1.05-((t-0.5)/(0.5))*0.65;
+      ys.push(Math.max(0.38,y));
     }
-    traces.push({type:'scatter',mode:'markers',name:'Noise (931 songs)',x:nxs,y:nys,
-      marker:{size:3,color:'#aaa',opacity:0.35},
-      hovertemplate:'Noise — no cluster assigned<extra></extra>'});
+    const traces=[
+      {type:'scatter',mode:'lines',name:'5th-neighbour distance',
+        x:xs,y:ys,line:{color:'#3D9E8C',width:2},
+        hovertemplate:'Song rank: %{x}<br>Distance: %{y:.3f}<extra></extra>'},
+      {type:'scatter',mode:'lines',name:'eps = 1.0 (optimal)',
+        x:[0,n],y:[1.0,1.0],line:{color:'#E8644A',width:2,dash:'dash'},
+        hoverinfo:'skip'}
+    ];
     const layout={
-      margin:{l:30,r:20,t:10,b:30},
+      margin:{l:55,r:20,t:15,b:50},
       paper_bgcolor:c.bg,plot_bgcolor:c.bg,
-      legend:{font:{color:c.txt,size:10},bgcolor:'rgba(0,0,0,0)',orientation:'h',y:-0.08},
-      xaxis:{showticklabels:false,showgrid:false,zeroline:false},
-      yaxis:{showticklabels:false,showgrid:false,zeroline:false},
+      legend:{font:{color:c.txt,size:11},bgcolor:'rgba(0,0,0,0)',x:0.55,y:0.98},
+      xaxis:{title:{text:'Songs sorted by distance to 5th nearest neighbour',font:{size:11,color:c.txt}},
+        tickfont:{size:10,color:c.txt},gridcolor:c.grid},
+      yaxis:{title:{text:'Distance',font:{size:11,color:c.txt}},
+        tickfont:{size:10,color:c.txt},gridcolor:c.grid},
       annotations:[
-        {x:0,y:2.9,xref:'paper',yref:'paper',text:'<b>Assigned: 4,304 songs (82%)</b>',
-          showarrow:false,font:{size:11,color:c.txt},xanchor:'left'},
-        {x:0,y:2.65,xref:'paper',yref:'paper',text:'<b style="color:#aaa">Noise discarded: 931 songs (18%)</b>',
-          showarrow:false,font:{size:11,color:'#999'},xanchor:'left'}
+        {x:200,y:1.05,xref:'x',yref:'y',text:'← elbow here = eps 1.0',
+          showarrow:true,ax:120,ay:-40,font:{size:11,color:'#E8644A'},arrowcolor:'#E8644A',arrowsize:1}
       ]
     };
     Plotly.newPlot('dbscan-chart',traces,layout,{responsive:true,displayModeBar:false});
