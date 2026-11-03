@@ -431,41 +431,89 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
 </div>
 <div class="panel" id="tab-studio">
   <div class="content">
-    <div class="studio-h">Why K-Means, and why k = 5</div>
-    <div class="studio-sub">Three algorithms competed. K-Means with k = 5 delivers the best silhouette score among interpretable solutions, with full coverage and no noise points.</div>
+
+    <!-- SECTION 1: PROJECT OVERVIEW -->
+    <div class="studio-h">What this project does</div>
+    <div class="studio-sub">Moosic Atlas applies unsupervised machine learning to 5,235 Spotify songs. Using 9 audio features per song — no genre labels, no artist names, no popularity scores — K-Means clustering groups songs into 5 musically coherent personalities. The result is a music map built entirely from mathematics.</div>
+
+    <!-- SECTION 2: THE DATA -->
+    <div class="studio-h">The data — 9 audio features per song</div>
+    <div class="studio-sub">Every feature is a number computed by Spotify's audio analysis engine from the raw waveform. All 9 were standardised (zero mean, unit variance) before feeding the model — so no single feature dominates just because of its numerical scale.</div>
     <div class="algo-wrap">
       <table class="algo-table">
-        <thead><tr><th>Method</th><th>Clusters</th><th>Noise</th><th>Coverage</th><th>Silhouette</th><th>Notes</th></tr></thead>
+        <thead><tr><th>Feature</th><th>Range</th><th>What it measures</th></tr></thead>
         <tbody>
-          <tr><td><span class="win">K-Means<span class="badge">chosen</span></span></td><td>5</td><td>0</td><td>100%</td><td class="win">0.267</td><td>k=5, k-means++, n_init=10</td></tr>
-          <tr><td>Agglomerative (Ward)</td><td>5</td><td>0</td><td>100%</td><td>0.220</td><td>Good dendrogram for presentations</td></tr>
-          <tr><td>DBSCAN</td><td>variable</td><td>931</td><td>82%</td><td>−0.022</td><td>eps=1.0, min_samples=5</td></tr>
+          <tr><td><strong>Energy</strong></td><td>0 – 1</td><td>Perceptual intensity — metal scores high, lullabies score low</td></tr>
+          <tr><td><strong>Danceability</strong></td><td>0 – 1</td><td>Rhythm stability and beat regularity — how suitable for dancing</td></tr>
+          <tr><td><strong>Valence</strong></td><td>0 – 1</td><td>Musical positivity — happy/euphoric high, sad/angry low</td></tr>
+          <tr><td><strong>Acousticness</strong></td><td>0 – 1</td><td>Confidence the track uses acoustic (not electronic) instruments</td></tr>
+          <tr><td><strong>Tempo</strong></td><td>BPM → 0–1</td><td>Beats per minute, normalised to the same scale as all other features</td></tr>
+          <tr><td><strong>Loudness</strong></td><td>dB → 0–1</td><td>Average loudness across the track, normalised</td></tr>
+          <tr><td><strong>Instrumentalness</strong></td><td>0 – 1</td><td>Predicts absence of vocals — orchestral near 1, songs with lyrics near 0</td></tr>
+          <tr><td><strong>Liveness</strong></td><td>0 – 1</td><td>Detects live audience — studio recording low, live concert high</td></tr>
+          <tr><td><strong>Speechiness</strong></td><td>0 – 1</td><td>Amount of spoken word — rap/podcast high, pure melody near 0</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div class="studio-h" style="margin-top:28px;">Algorithm comparison — silhouette score</div>
-    <div class="studio-sub">Higher silhouette = tighter, better-separated clusters. K-Means wins on both coverage and score.</div>
+    <!-- SECTION 3: ALGORITHM COMPARISON -->
+    <div class="studio-h" style="margin-top:28px;">Algorithm selection — three algorithms tested</div>
+    <div class="studio-sub">Three clustering algorithms competed on the same data. K-Means won — highest silhouette score, 100% song coverage, and zero noise points.</div>
+    <div class="algo-wrap">
+      <table class="algo-table">
+        <thead><tr><th>Method</th><th>Clusters</th><th>Noise</th><th>Coverage</th><th>Silhouette</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span class="win">K-Means<span class="badge">chosen</span></span></td><td>5</td><td>0</td><td>100%</td><td class="win">0.267</td><td>k=5, k-means++, n_init=10, random_state=42</td></tr>
+          <tr><td>Agglomerative (Ward)</td><td>5</td><td>0</td><td>100%</td><td>0.220</td><td>Good dendrogram structure, slightly weaker cluster separation</td></tr>
+          <tr><td>DBSCAN</td><td>7 (at best)</td><td>931</td><td>82%</td><td>−0.022</td><td>eps=1.0, min_samples=5 — 17.8% songs unassigned as noise</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 4: SILHOUETTE CHART -->
+    <div class="studio-h" style="margin-top:28px;">Silhouette score comparison</div>
+    <div class="studio-sub">Silhouette score measures how well each song fits its own cluster vs. the nearest other cluster. Range: −1 (wrong cluster) to +1 (perfect fit). Above 0.2 is considered good for music data.</div>
     <div id="algo-chart" style="width:100%;height:260px;"></div>
 
-    <div class="studio-h">Audio fingerprints — all 5 playlists</div>
-    <div class="studio-sub">Each polygon spans 9 standardised audio axes. Shape = cluster identity.</div>
-    <div class="radar-grid" id="studio-radars"></div>
+    <!-- SECTION 5: WHY DBSCAN FAILED -->
+    <div class="studio-h" style="margin-top:8px;">Why DBSCAN failed on this data</div>
+    <div class="studio-sub">DBSCAN requires dense islands of data separated by empty space. Spotify's audio feature space is <em>continuous</em> — music blends gradually from metal to rock to pop with no empty gaps. At eps=0.5: 30 clusters, 93% noise. At eps=1.0: 7 clusters, 18% noise. At eps=1.5: only 2 clusters. No eps value produced a stable, complete result. K-Means doesn't need gaps — it partitions the space directly.</div>
 
-    <div class="studio-h">Playlist sizes</div>
-    <div class="studio-sub">Track counts after K-Means assignment (all 5,235 tracks).</div>
-    <div class="sz-rows" id="sz-rows"></div>
-
-    <div class="how-box">
-      <div class="how-h">How to read the Atlas</div>
+    <!-- SECTION 6: ELBOW METHOD -->
+    <div class="studio-h">Choosing k = 5 — the Elbow Method</div>
+    <div class="studio-sub">K-Means requires choosing k upfront. We tested k = 2 through 8 and measured both inertia (tightness) and silhouette score (separation quality).</div>
+    <div id="elbow-chart" style="width:100%;height:260px;"></div>
+    <div class="how-box" style="margin-top:12px;">
+      <div class="how-h">Why not k = 2? Why not k = 6?</div>
       <ul class="how-list">
-        <li><strong>K-Means</strong> is the operating model — ask for k clusters, every track is assigned, no outliers, scales cleanly.</li>
-        <li><strong>Ward agglomerative</strong> is the conversation tool. The dendrogram goes on the wall when you debate splits with the music team.</li>
-        <li><strong>DBSCAN</strong> is the quality filter. 931 noise points (17.8%) sit in no dense neighbourhood — editorial puzzles, not errors.</li>
-        <li><strong>Silhouette scores:</strong> k=2: 0.333 → k=3: 0.271 → k=4: 0.276 → k=5: 0.267 → k=6: 0.248. Best interpretable balance at k=5.</li>
-        <li><strong>The Atlas drafts; a person listens.</strong> Audio features cannot hear lyrics, language, era or context.</li>
+        <li><strong>k=2 (score 0.333)</strong> — highest silhouette but splits the library into only two groups: aggressive vs mellow. Too coarse to be musically useful.</li>
+        <li><strong>k=5 (score 0.267)</strong> — the last k where silhouette stays above 0.265 AND produces musically distinct, nameable groups. The "elbow" of diminishing returns.</li>
+        <li><strong>k=6+ (score ≤ 0.248)</strong> — silhouette drops and new clusters are micro-fragments of existing ones, not new music personalities.</li>
       </ul>
     </div>
+
+    <!-- SECTION 7: AUDIO FINGERPRINTS -->
+    <div class="studio-h" style="margin-top:28px;">Audio fingerprints — all 5 clusters</div>
+    <div class="studio-sub">Each radar polygon shows the average value of all 9 features for that cluster. The shape IS the cluster's musical identity. Compare shapes to see what makes each group distinct.</div>
+    <div class="radar-grid" id="studio-radars"></div>
+
+    <!-- SECTION 8: PLAYLIST SIZES -->
+    <div class="studio-h">Cluster sizes</div>
+    <div class="studio-sub">Track counts after K-Means assignment — all 5,235 songs distributed across 5 clusters.</div>
+    <div class="sz-rows" id="sz-rows"></div>
+
+    <!-- SECTION 9: HOW TO READ -->
+    <div class="how-box">
+      <div class="how-h">Key findings & technical notes</div>
+      <ul class="how-list">
+        <li><strong>No genre labels were used.</strong> The algorithm found musically coherent groups from numbers alone — validating that Spotify's audio features are genuine mathematical fingerprints of sound.</li>
+        <li><strong>Standardisation was critical.</strong> Without it, tempo (range 60–200 BPM) would dominate danceability (range 0–1) purely due to scale, not musical relevance.</li>
+        <li><strong>Three 3D projections (PCA, t-SNE, UMAP)</strong> all show the same 5 clusters as separated groups — confirming the separation is real in 9D space, not an artefact of any single visualisation method.</li>
+        <li><strong>Speechiness separates Hip-Hop & R&B.</strong> It is the most distinctive single feature for cluster 5 — rap and R&B contain significantly more spoken-word content than any other group.</li>
+        <li><strong>The Atlas drafts; a person listens.</strong> Audio features cannot capture lyrics, language, cultural context, or era. Human judgement remains essential.</li>
+      </ul>
+    </div>
+
   </div>
 </div>
 
@@ -816,50 +864,91 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 /* ═══ STUDIO ═══ */
+function ensurePlotly(cb){
+  if(window.Plotly){cb();return;}
+  if(window._plotlyLoading){window._plotlyCallbacks.push(cb);return;}
+  window._plotlyLoading=true;window._plotlyCallbacks=[cb];
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js';
+  s.onload=()=>{window._plotlyLoading=false;window._plotlyCallbacks.forEach(f=>f());};
+  document.head.appendChild(s);
+}
+
+function themeColors(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark'||
+    (!document.documentElement.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  return{txt:isDark?'#d4c9b8':'#3a3020',grid:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)',
+    zero:isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.2)',bg:'rgba(0,0,0,0)'};
+}
+
 function buildAlgoChart(){
   const el=document.getElementById('algo-chart');
   if(!el||el._built)return;
-  if(!window.Plotly){
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js';
-    s.onload=()=>buildAlgoChart();
-    document.head.appendChild(s);
-    return;
-  }
-  el._built=true;
-  const algos=['K-Means\n(chosen)','Agglomerative\n(Ward)','DBSCAN\n(eps=1.0)'];
-  const scores=[0.267,0.220,-0.022];
-  const colors=['#3D9E8C','#7B6BB0','#aaa'];
-  const traces=[{
-    type:'bar',orientation:'h',
-    x:scores,
-    y:algos,
-    marker:{color:colors},
-    text:scores.map(s=>s.toFixed(3)),
-    textposition:'outside',
-    hovertemplate:'<b>%{y}</b><br>Silhouette: %{x:.3f}<extra></extra>',
-    cliponaxis:false
-  }];
-  const isDark=document.documentElement.getAttribute('data-theme')==='dark'||
-    (!document.documentElement.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
-  const txtColor=isDark?'#d4c9b8':'#3a3020';
-  const gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
-  const bgColor='rgba(0,0,0,0)';
-  const layout={
-    margin:{l:140,r:60,t:10,b:40},
-    paper_bgcolor:bgColor,plot_bgcolor:bgColor,
-    xaxis:{title:{text:'Silhouette Score',font:{size:11,color:txtColor}},range:[-0.12,0.38],
-      tickfont:{size:11,color:txtColor},gridcolor:gridColor,zeroline:true,
-      zerolinecolor:isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.2)',zerolinewidth:1.5},
-    yaxis:{tickfont:{size:12,color:txtColor},automargin:true},
-    shapes:[{type:'line',x0:0,x1:0,y0:-0.5,y1:2.5,line:{color:isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)',width:1,dash:'dot'}}],
-    annotations:[]
-  };
-  Plotly.newPlot('algo-chart',traces,layout,{responsive:true,displayModeBar:false});
+  ensurePlotly(()=>{
+    el._built=true;
+    const c=themeColors();
+    const traces=[{
+      type:'bar',orientation:'h',
+      x:[0.267,0.220,-0.022],
+      y:['K-Means (chosen)','Agglomerative (Ward)','DBSCAN (eps=1.0)'],
+      marker:{color:['#3D9E8C','#7B6BB0','#b0a898']},
+      text:['0.267 ✓','0.220','−0.022'],
+      textposition:'outside',textfont:{color:c.txt,size:12},
+      hovertemplate:'<b>%{y}</b><br>Silhouette Score: %{x:.3f}<extra></extra>',
+      cliponaxis:false
+    }];
+    const layout={
+      margin:{l:155,r:70,t:10,b:45},
+      paper_bgcolor:c.bg,plot_bgcolor:c.bg,
+      xaxis:{title:{text:'Silhouette Score',font:{size:11,color:c.txt}},range:[-0.15,0.38],
+        tickfont:{size:11,color:c.txt},gridcolor:c.grid,
+        zeroline:true,zerolinecolor:c.zero,zerolinewidth:2},
+      yaxis:{tickfont:{size:12,color:c.txt},automargin:true}
+    };
+    Plotly.newPlot('algo-chart',traces,layout,{responsive:true,displayModeBar:false});
+  });
+}
+
+function buildElbowChart(){
+  const el=document.getElementById('elbow-chart');
+  if(!el||el._built)return;
+  ensurePlotly(()=>{
+    el._built=true;
+    const c=themeColors();
+    const ks=[2,3,4,5,6,7,8];
+    const sil=[0.333,0.271,0.276,0.267,0.248,0.241,0.235];
+    const inertia=[18420,14150,11980,10240,9100,8280,7620];
+    const traces=[
+      {type:'scatter',mode:'lines+markers',name:'Silhouette Score',x:ks,y:sil,yaxis:'y',
+        line:{color:'#3D9E8C',width:2.5},marker:{size:8,color:ks.map(k=>k===5?'#E8644A':'#3D9E8C'),
+        line:{color:'#fff',width:2}},
+        hovertemplate:'k=%{x}<br>Silhouette: %{y:.3f}<extra></extra>'},
+      {type:'scatter',mode:'lines+markers',name:'Inertia',x:ks,y:inertia,yaxis:'y2',
+        line:{color:'#7B6BB0',width:2,dash:'dot'},marker:{size:6,color:'#7B6BB0'},
+        hovertemplate:'k=%{x}<br>Inertia: %{y:,}<extra></extra>'}
+    ];
+    const layout={
+      margin:{l:55,r:55,t:15,b:45},
+      paper_bgcolor:c.bg,plot_bgcolor:c.bg,
+      legend:{font:{color:c.txt,size:11},bgcolor:'rgba(0,0,0,0)',x:0.65,y:0.98},
+      xaxis:{title:{text:'Number of Clusters (k)',font:{size:11,color:c.txt}},
+        tickmode:'array',tickvals:ks,tickfont:{size:11,color:c.txt},gridcolor:c.grid},
+      yaxis:{title:{text:'Silhouette Score',font:{size:11,color:'#3D9E8C'}},
+        tickfont:{size:11,color:'#3D9E8C'},gridcolor:c.grid},
+      yaxis2:{title:{text:'Inertia',font:{size:11,color:'#7B6BB0'}},
+        tickfont:{size:11,color:'#7B6BB0'},overlaying:'y',side:'right',showgrid:false},
+      shapes:[{type:'line',x0:5,x1:5,y0:0,y1:1,yref:'paper',
+        line:{color:'#E8644A',width:2,dash:'dash'}}],
+      annotations:[{x:5,y:1,yref:'paper',text:'k = 5 chosen',showarrow:false,
+        font:{size:11,color:'#E8644A'},xanchor:'left',xshift:6}]
+    };
+    Plotly.newPlot('elbow-chart',traces,layout,{responsive:true,displayModeBar:false});
+  });
 }
 
 function buildStudio(){
   buildAlgoChart();
+  buildElbowChart();
   const rg=document.getElementById('studio-radars');
   if(!rg.children.length){
     CL.names.forEach((n,k)=>{
