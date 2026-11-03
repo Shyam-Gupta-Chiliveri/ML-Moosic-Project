@@ -819,6 +819,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 function buildAlgoChart(){
   const el=document.getElementById('algo-chart');
   if(!el||el._built)return;
+  if(!window.Plotly){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js';
+    s.onload=()=>buildAlgoChart();
+    document.head.appendChild(s);
+    return;
+  }
   el._built=true;
   const algos=['K-Means\n(chosen)','Agglomerative\n(Ward)','DBSCAN\n(eps=1.0)'];
   const scores=[0.267,0.220,-0.022];
