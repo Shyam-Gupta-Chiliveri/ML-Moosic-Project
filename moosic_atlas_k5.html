@@ -472,15 +472,14 @@ canvas#scatter{display:block;width:100%;flex:1;min-width:0;}
     <div class="how-box" style="margin-top:12px;">
       <div class="how-h">Why Agglomerative scored 0.220 vs K-Means 0.267</div>
       <ul class="how-list">
-        <li><strong>Both assign 100% of songs</strong> — no noise, no discards, same coverage.</li>
-        <li><strong>Ward linkage minimises within-cluster variance</strong> — same objective as K-Means, but built hierarchically instead of iteratively.</li>
-        <li><strong>K-Means iterates to convergence</strong> — it keeps reassigning songs until every song is in its optimal cluster. Agglomerative merges are permanent — once two songs are grouped they stay grouped, even if a later merge makes that suboptimal.</li>
-        <li><strong>Result:</strong> Agglomerative produces slightly fuzzier boundaries (silhouette 0.220 vs 0.267). Good enough to validate K-Means; not good enough to replace it.</li>
+        <li><strong>Both cover 100% of songs</strong> — no noise, no discards.</li>
+        <li><strong>Agglomerative merges are permanent</strong> — once two songs are grouped, they stay grouped even if a later merge makes it suboptimal. K-Means keeps reassigning until every song is in its best cluster.</li>
+        <li><strong>Result:</strong> slightly fuzzier boundaries — silhouette 0.220 vs 0.267. Validates K-Means but doesn't replace it.</li>
       </ul>
     </div>
 
     <!-- SECTION 6: ELBOW METHOD -->
-    <div class="studio-h">Choosing k = 5 — the Elbow Method</div>
+    <div class="studio-h" style="margin-top:28px;">Choosing k = 5 — the Elbow Method</div>
     <div class="studio-sub">K-Means requires choosing k upfront. We tested k = 2 through 8 and measured both inertia (tightness) and silhouette score (separation quality).</div>
     <div id="elbow-chart" style="width:100%;height:260px;"></div>
     <div class="how-box" style="margin-top:12px;">
