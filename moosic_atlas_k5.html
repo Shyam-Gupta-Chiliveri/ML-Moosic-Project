@@ -853,8 +853,7 @@ function buildAlgoChart(){
       zerolinecolor:isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.2)',zerolinewidth:1.5},
     yaxis:{tickfont:{size:12,color:txtColor},automargin:true},
     shapes:[{type:'line',x0:0,x1:0,y0:-0.5,y1:2.5,line:{color:isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)',width:1,dash:'dot'}}],
-    annotations:[{x:0.267,y:0,xref:'x',yref:'y',text:'✓ Best',showarrow:false,
-      font:{size:11,color:'#3D9E8C'},xanchor:'left',xshift:6,yshift:0}]
+    annotations:[]
   };
   Plotly.newPlot('algo-chart',traces,layout,{responsive:true,displayModeBar:false});
 }
