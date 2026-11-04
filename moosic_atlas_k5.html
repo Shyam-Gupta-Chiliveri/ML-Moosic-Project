@@ -1127,18 +1127,43 @@ function render3d(which){
       zaxis:{title:zlab,showticklabels:false,gridcolor:'#c8c0b0',zerolinecolor:'#c8c0b0',backgroundcolor:bgcol},
       bgcolor:bgcol
     },
-    legend:{title:{text:'Playlist'},font:{size:12,color:'#2a2018'},bgcolor:'rgba(237,231,220,0.9)',itemsizing:'constant'},
+    legend:{title:{text:'Playlist'},font:{size:12,color:'#2a2018'},bgcolor:'rgba(237,231,220,0.9)',itemsizing:'constant',itemclick:'toggle',itemdoubleclick:'toggleothers'},
     height:h||680, paper_bgcolor:'white',
     font:{family:'Inter,system-ui,sans-serif',color:'#2a2018'},
     margin:{t:70,b:20,l:10,r:10}
   },extra||{});
 
   /* helper: 5 invisible legend-only traces so legend dots are big */
+  function bindClusterLegend(gd){
+    if(!gd) return;
+    const handler=function(ev){
+      const name=ev.data[ev.curveNumber].name;
+      const hide=[], show=[];
+      gd.data.forEach((tr,i)=>{
+        if(tr.name!==name && tr.legendgroup!==name) return;
+        const off=(tr.visible==='legendonly' || tr.visible===false);
+        (off?show:hide).push(i);
+      });
+      if(hide.length) Plotly.restyle(gd,{visible:'legendonly'},hide);
+      if(show.length) Plotly.restyle(gd,{visible:true},show);
+      return false;
+    };
+    if(typeof gd.removeListener==='function' && gd._clusterLegendHandler){
+      gd.removeListener('plotly_legendclick', gd._clusterLegendHandler);
+    }
+    gd._clusterLegendHandler=handler;
+    gd.on('plotly_legendclick', handler);
+  }
+  function after3d(id, promise){
+    const go=()=>bindClusterLegend(document.getElementById(id));
+    if(promise && promise.then) promise.then(go); else go();
+  }
   function legendTraces(){
     return CL.names.map((name,k)=>({
       type:'scatter3d',mode:'markers',name,
       x:[null],y:[null],z:[null],
       marker:{size:14,color:CL.colors[k],opacity:1},
+      legendgroup:name,
       showlegend:true,hoverinfo:'skip'
     }));
   }
@@ -1150,7 +1175,7 @@ function render3d(which){
       for(const p of pts){ xs.push(p[0]);ys.push(p[1]);zs.push(p[2]);texts.push(p[3]+'<br>'+p[4]); }
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:3,color:CL.colors[k],opacity:0.65},showlegend:false};
+        marker:{size:3,color:CL.colors[k],opacity:0.65},legendgroup:name,showlegend:false};
     }));
     /* Feature loading arrows — same as notebook: L3 = components_.T * 3 */
     for(const [lbl,[x0,y0,z0],[x1,y1,z1]] of PCA_L3){
@@ -1160,10 +1185,10 @@ function render3d(which){
     }
     const tot=totalSongs.toLocaleString();
     const vsum=(PCA_VAR[0]+PCA_VAR[1]+PCA_VAR[2]).toFixed(1);
-    Plotly.newPlot('plot-pca3d',traces,layout3d(
+    after3d('plot-pca3d',Plotly.newPlot('plot-pca3d',traces,layout3d(
       '3D PCA — '+tot+' Songs · '+PCA_VAR[0]+'% + '+PCA_VAR[1]+'% + '+PCA_VAR[2]+'% = '+vsum+'% variance<br><sup>Rotate · Zoom · Hover to see song & artist · Green arrows = feature loadings</sup>',
       'PC1  '+PCA_VAR[0]+'%','PC2  '+PCA_VAR[1]+'%','PC3  '+PCA_VAR[2]+'%',750),
-      {responsive:true,displayModeBar:false});
+      {responsive:true,displayModeBar:false}));
   }
 
   /* ── 3D UMAP: real UMAP coordinates (n_neighbors=15, min_dist=0.1) ── */
@@ -1173,11 +1198,11 @@ function render3d(which){
       for(const p of pts){xs.push(p[0]);ys.push(p[1]);zs.push(p[2]);texts.push(p[3]+'<br>'+p[4]);}
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:3,color:CL.colors[k],opacity:0.75},showlegend:false};
+        marker:{size:3,color:CL.colors[k],opacity:0.75},legendgroup:name,showlegend:false};
     }));
-    Plotly.newPlot('plot-umap3d',traces,layout3d(
+    after3d('plot-umap3d',Plotly.newPlot('plot-umap3d',traces,layout3d(
       '3D UMAP — '+totalSongs.toLocaleString()+' Songs · 5 Clusters<br><sup>Rotate · Zoom · Hover to see song & artist · Preserves global cluster structure better than t-SNE</sup>',
-      'UMAP 1','UMAP 2','UMAP 3',750),{responsive:true,displayModeBar:false});
+      'UMAP 1','UMAP 2','UMAP 3',750),{responsive:true,displayModeBar:false}));
   }
 
   /* ── 3D t-SNE: sklearn TSNE(n_components=3, perplexity=40, max_iter=1000) ── */
@@ -1187,11 +1212,11 @@ function render3d(which){
       for(const p of pts){xs.push(p[0]);ys.push(p[1]);zs.push(p[2]);texts.push(p[3]+'<br>'+p[4]);}
       return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
         hovertemplate:'%{text}<extra>'+name+'</extra>',
-        marker:{size:3,color:CL.colors[k],opacity:0.7},showlegend:false};
+        marker:{size:3,color:CL.colors[k],opacity:0.7},legendgroup:name,showlegend:false};
     }));
-    Plotly.newPlot('plot-tsne3d',traces,layout3d(
+    after3d('plot-tsne3d',Plotly.newPlot('plot-tsne3d',traces,layout3d(
       '3D t-SNE — '+totalSongs.toLocaleString()+' Songs · 5 Clusters<br><sup>Rotate · Zoom · Hover to see song & artist · Preserves local neighbourhood structure</sup>',
-      't-SNE 1','t-SNE 2','t-SNE 3',750),{responsive:true,displayModeBar:false});
+      't-SNE 1','t-SNE 2','t-SNE 3',750),{responsive:true,displayModeBar:false}));
   }
 
   /* ── Centroid Distance Map ── */
@@ -1207,15 +1232,18 @@ function render3d(which){
         hovertemplate:CL.names[i]+' ↔ '+CL.names[j]+'<br>Distance: '+d+'<extra></extra>',showlegend:false});
     }
     const mx=Math.max(...CL.counts);
-    traces.push({type:'scatter3d',mode:'markers+text',x:cx,y:cy,z:cz,
-      text:CL.names.map((n,k)=>n+'<br>'+CL.counts[k].toLocaleString()+' songs'),
-      textposition:'top center',textfont:{size:11,color:'#2a2018'},
-      hovertemplate:'%{text}<extra></extra>',
-      marker:{size:CL.counts.map(c=>c/mx*28+10),color:CL.colors,opacity:0.9,line:{width:1,color:'white'}},
-      showlegend:false});
-    Plotly.newPlot('plot-cent3d',traces,layout3d(
+    CL.names.forEach((name,k)=>{
+      traces.push({type:'scatter3d',mode:'markers+text',name,legendgroup:name,
+        x:[cx[k]],y:[cy[k]],z:[cz[k]],
+        text:[name+'<br>'+CL.counts[k].toLocaleString()+' songs'],
+        textposition:'top center',textfont:{size:11,color:'#2a2018'},
+        hovertemplate:'%{text}<extra></extra>',
+        marker:{size:CL.counts[k]/mx*28+10,color:CL.colors[k],opacity:0.9,line:{width:1,color:'white'}},
+        showlegend:true});
+    });
+    after3d('plot-cent3d',Plotly.newPlot('plot-cent3d',traces,layout3d(
       '3D Centroid Distance Map — How Far Apart Are the Playlists?<br><sup>Sphere size = number of songs · Line length = musical distance between clusters</sup>',
-      'Energy','Danceability','Valence',700),{responsive:true,displayModeBar:false});
+      'Energy','Danceability','Valence',700),{responsive:true,displayModeBar:false}));
   }
 
   /* ── Feature Space Explorer — matches notebook exactly ── */
@@ -1230,7 +1258,7 @@ function render3d(which){
         for(const s of S){xs.push(s[xi]);ys.push(s[yi]);zs.push(s[zi]);texts.push(s[0]+'<br>'+s[1]);}
         return {type:'scatter3d',mode:'markers',name,x:xs,y:ys,z:zs,text:texts,
           hovertemplate:'%{text}<extra>'+name+'</extra>',
-          marker:{size:3,color:CL.colors[k],opacity:0.65},showlegend:false};
+          marker:{size:3,color:CL.colors[k],opacity:0.65},legendgroup:name,showlegend:false};
       }));
     }
 
@@ -1263,7 +1291,7 @@ function render3d(which){
         {text:'Z Axis:',showarrow:false,x:0.69,xref:'paper',y:1.275,yref:'paper',font:{size:11,color:'#7a7060'},xanchor:'left'},
       ]
     });
-    Plotly.newPlot('plot-feat3d',buildFeat3d(curXi,curYi,curZi),lay,{responsive:true,displayModeBar:false});
+    after3d('plot-feat3d',Plotly.newPlot('plot-feat3d',buildFeat3d(curXi,curYi,curZi),lay,{responsive:true,displayModeBar:false}));
   }
 }
 
