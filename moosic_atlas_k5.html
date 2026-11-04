@@ -1147,14 +1147,16 @@ function render3d(which){
       if(hide.length) Plotly.restyle(gd,{visible:'legendonly'},hide);
       if(show.length) Plotly.restyle(gd,{visible:true},show);
     };
+    const isCluster=tr=>CL.names.indexOf(tr.name)>=0||CL.names.indexOf(tr.legendgroup)>=0;
     const isolate=function(name){
-      const othersOn=gd.data.some(tr=>!same(tr,name)&&!off(tr));
+      const othersOn=gd.data.some(tr=>isCluster(tr)&&!same(tr,name)&&!off(tr));
       const thisOn=gd.data.some(tr=>same(tr,name)&&!off(tr));
-      if(!othersOn && thisOn){
-        Plotly.restyle(gd,{visible:true});
-        return;
-      }
-      Plotly.restyle(gd,{visible:gd.data.map(tr=>same(tr,name)?true:'legendonly')});
+      const vis=tr=>{
+        if(!isCluster(tr)) return true;
+        if(!othersOn && thisOn) return true;
+        return same(tr,name)?true:'legendonly';
+      };
+      Plotly.restyle(gd,{visible:gd.data.map(vis)});
     };
     const click=function(ev){
       const name=ev.data[ev.curveNumber].name;
