@@ -1136,23 +1136,46 @@ function render3d(which){
   /* helper: 5 invisible legend-only traces so legend dots are big */
   function bindClusterLegend(gd){
     if(!gd) return;
-    const handler=function(ev){
-      const name=ev.data[ev.curveNumber].name;
+    const off=tr=>tr.visible==='legendonly'||tr.visible===false;
+    const same=(tr,name)=>tr.name===name||tr.legendgroup===name;
+    const toggle=function(name){
       const hide=[], show=[];
       gd.data.forEach((tr,i)=>{
-        if(tr.name!==name && tr.legendgroup!==name) return;
-        const off=(tr.visible==='legendonly' || tr.visible===false);
-        (off?show:hide).push(i);
+        if(!same(tr,name)) return;
+        (off(tr)?show:hide).push(i);
       });
       if(hide.length) Plotly.restyle(gd,{visible:'legendonly'},hide);
       if(show.length) Plotly.restyle(gd,{visible:true},show);
+    };
+    const isolate=function(name){
+      const othersOn=gd.data.some(tr=>!same(tr,name)&&!off(tr));
+      const thisOn=gd.data.some(tr=>same(tr,name)&&!off(tr));
+      if(!othersOn && thisOn){
+        Plotly.restyle(gd,{visible:true});
+        return;
+      }
+      Plotly.restyle(gd,{visible:gd.data.map(tr=>same(tr,name)?true:'legendonly')});
+    };
+    const click=function(ev){
+      const name=ev.data[ev.curveNumber].name;
+      clearTimeout(gd._clusterLegendTimer);
+      gd._clusterLegendTimer=setTimeout(()=>toggle(name),280);
       return false;
     };
-    if(typeof gd.removeListener==='function' && gd._clusterLegendHandler){
-      gd.removeListener('plotly_legendclick', gd._clusterLegendHandler);
+    const dbl=function(ev){
+      const name=ev.data[ev.curveNumber].name;
+      clearTimeout(gd._clusterLegendTimer);
+      isolate(name);
+      return false;
+    };
+    if(typeof gd.removeListener==='function'){
+      if(gd._clusterLegendHandler) gd.removeListener('plotly_legendclick', gd._clusterLegendHandler);
+      if(gd._clusterLegendDblHandler) gd.removeListener('plotly_legenddoubleclick', gd._clusterLegendDblHandler);
     }
-    gd._clusterLegendHandler=handler;
-    gd.on('plotly_legendclick', handler);
+    gd._clusterLegendHandler=click;
+    gd._clusterLegendDblHandler=dbl;
+    gd.on('plotly_legendclick', click);
+    gd.on('plotly_legenddoubleclick', dbl);
   }
   function after3d(id, promise){
     const go=()=>bindClusterLegend(document.getElementById(id));
